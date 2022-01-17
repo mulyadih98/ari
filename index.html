@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <title>Hello, world!</title>
+  </head>
+  <body>
+    <div class="container">
+      <form >
+        <div class="mb-3">
+          <label for="nip" class="form-label">NIP</label>
+          <input type="text" id="nip" 
+            oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');"
+            autocomplete="off" class="form-control">
+        </div>
+          <div class="mb-3">
+            <label for="nama" class="form-label">Nama</label>
+            <input type="text" class="form-control" id="nama">
+          </div>
+          <div class="mb-3">
+            <label for="divisi" class="form-label">Divisi</label>
+            <input type="email" class="form-control" id="divisi">
+          </div>
+        <button id="kirim">Submit</button>
+      </form>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>NIP</th>
+            <th>Nama</th>
+            <th>Divisi</th>
+            <th>action</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="nipModal">
+            <div class="mb-3">
+              <label for="namaModal" class="form-label">Nama</label>
+              <input type="text" class="form-control" id="namaModal">
+            </div>
+            <div class="mb-3">
+              <label for="divisiModal" class="form-label">Divisi</label>
+              <input type="text" class="form-control" id="divisiModal">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" onclick="saveEdit()">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional JavaScript; choose one of the two! -->
+
+    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+
+    <!-- Option 2: Separate Popper and Bootstrap JS -->
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>
+    -->
+    <script>
+      const nip = document.querySelector('#nip');
+      const nama = document.querySelector('#nama');
+      const divisi = document.querySelector('#divisi');
+      const nipModal = document.querySelector('#nipModal');
+      const namaModal = document.querySelector('#namaModal');
+      const divisiModal = document.querySelector('#divisiModal');
+      const kirim = document.querySelector('#kirim');
+      const tbody = document.querySelector('#tbody');
+      const exampleModal = document.querySelector('#exampleModal');
+      const modal = new bootstrap.Modal(exampleModal);
+      kirim.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const data = {nip: nip.value, nama: nama.value, divisi: divisi.value};
+        const request = await fetch('http://localhost/interview3/actions/karyawan/store.php',{
+          method: 'POST',
+          body: JSON.stringify(data)
+        })
+        const resultJson = await request.json();
+        clear();
+        getKaryawan();
+        console.log(resultJson);
+      })
+
+      const clear = () => {
+        nip.value = '';
+        nama.value = '';
+        divisi.value = '';
+      }
+
+      const getKaryawan = async () => {
+        const request = await fetch('http://localhost/interview3/actions/karyawan/get.php');
+        const responseJson = await request.json();
+        tbody.innerHTML = '';
+        for( const data of responseJson) {
+          tbody.innerHTML += template(data);
+        }
+      }
+
+      const template = (data) => {
+        return `
+          <tr>
+            <td>${data.nip}</td>
+            <td>${data.nama}</td>
+            <td>${data.divisi}</td>
+            <td>
+                <button onclick="handleDelete(${data.nip})" class="btn btn-danger">Delete</button>
+                <button onclick="handleEdit('${data.nip},${data.nama},${data.divisi}')" class="btn btn-success">Edit</button>
+            </td>
+          </tr>
+        `;
+      }
+
+      const saveEdit = () => {
+        edit(nipModal.value,namaModal.value,divisiModal.value);
+        modal.hide();
+      }
+
+      const handleDelete = (nip) => {
+        const question = confirm(`Apa anda yakin ingin menghapus karyawan dengan id ${nip}`);
+        if(question){
+          deleteKaryawan(nip)
+        }
+      }
+
+      const edit = async (nip, nama, divisi) => {
+        await fetch(`http://localhost/interview3/actions/karyawan/update.php?nip=${nip}`,{
+          method: 'POST',
+          body: JSON.stringify({nama,divisi})
+        })
+        getKaryawan();
+      }
+
+      const handleEdit = (data) => {
+        const dataArray = data.split(',');
+        nipModal.value = dataArray[0];
+        namaModal.value = dataArray[1];
+        divisiModal.value = dataArray[2];
+        modal.show()
+      }
+
+      const deleteKaryawan = async (nip) => {
+          await fetch(`http://localhost/interview3/actions/karyawan/delete.php?nip=${nip}`);
+          getKaryawan();
+      }
+
+      window.onload = () => {
+        getKaryawan()
+      }
+    </script>
+    
+  </body>
+</html>
